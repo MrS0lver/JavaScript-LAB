@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple Weather App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" role="application">
+    <header>
+      <div>
+        <h1>Simple Weather App</h1>
+        <p>Type a city name and press Get Weather</p>
+      </div>
+      <div style="text-align:right;font-size:12px;opacity:0.9">Powered by OpenWeatherMap</div>
+    </header>
+
+    <div class="controls">
+      <input id="cityInput" type="text" placeholder="e.g. Mumbai" aria-label="City name" />
+      <button id="getBtn">Get</button>
+    </div>
+
+    <div id="card" class="card" hidden>
+      <div class="weather-icon"><img id="icon" src="" alt="weather icon" width="96" height="96" /></div>
+      <div class="weather-info">
+        <p id="temp" class="temp">--°C</p>
+        <p id="desc" class="desc">—</p>
+        <div class="meta">
+          <div id="feels">Feels: --°C</div>
+          <div id="hum">Humidity: --%</div>
+          <div id="wind">Wind: -- m/s</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="hint" class="hint">Tip: Use city names like "London" or "New York". For best results create a free API key at OpenWeatherMap.</div>
+    <div id="error" class="error" hidden></div>
+
+    <script>
+      const API_KEY = 'PASTE_YOUR_OPENWEATHERMAP_API_KEY_HERE';
+
+      const cityInput = document.getElementById('cityInput');
+      const getBtn = document.getElementById('getBtn');
+      const card = document.getElementById('card');
+      const icon = document.getElementById('icon');
+      const temp = document.getElementById('temp');
+      const desc = document.getElementById('desc');
+      const feels = document.getElementById('feels');
+      const hum = document.getElementById('hum');
+      const wind = document.getElementById('wind');
+      const errorEl = document.getElementById('error');
+
+      async function fetchWeather(city){
+        errorEl.hidden = true;
+        if(!API_KEY || API_KEY.startsWith('PASTE')){
+          showError('No API key set. Put your OpenWeatherMap API key in the code (API_KEY).');
+          return;
+        }
+        try{
+          const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${API_KEY}`;
+          const res = await fetch(url);
+          if(!res.ok){
+            const err = await res.json().catch(()=>({message:'Unknown error'}));
+            throw new Error(err.message || 'City not found');
+          }
+          const data = await res.json();
+          render(data);
+        }catch(err){
+          showError(err.message || 'Failed to fetch weather');
+        }
+      }
+
+      function render(data){
+        const weather = data.weather && data.weather[0];
+        const iconCode = weather ? weather.icon : '';
+        icon.src = iconCode ? `https://openweathermap.org/img/wn/${iconCode}@2x.png` : '';
+        icon.alt = weather ? weather.description : '';
+        temp.textContent = Math.round(data.main.temp) + '°C';
+        desc.textContent = weather ? capitalize(weather.description) : '—';
+        feels.textContent = 'Feels: ' + Math.round(data.main.feels_like) + '°C';
+        hum.textContent = 'Humidity: ' + data.main.humidity + '%';
+        wind.textContent = 'Wind: ' + data.wind.speed + ' m/s';
+        card.hidden = false;
+      }
+
+      function showError(msg){
+        errorEl.textContent = msg;
+        errorEl.hidden = false;
+      }
+
+      function capitalize(s){
+        return s.split(' ').map(p=>p[0].toUpperCase()+p.slice(1)).join(' ');
+      }
+
+      getBtn.addEventListener('click', ()=>{
+        const city = cityInput.value.trim();
+        if(!city){ showError('Please enter a city name'); return; }
+        fetchWeather(city);
+      });
+
+      cityInput.addEventListener('keypress', (e)=>{ if(e.key==='Enter') getBtn.click(); });
+    </script>
+  </div>
+</body>
+</html>
